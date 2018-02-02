@@ -1,1 +1,1 @@
-Js.log("Very Simple Compiler");
+let lisp = "(add 2 (subtract 4 2))";
