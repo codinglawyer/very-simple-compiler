@@ -5,6 +5,18 @@ type token = {
   value: string
 };
 
+let stringToList = s => {
+	let rec exp = (index, acc) => {
+  		if(index < 0){
+      		acc
+      	}
+      	else{
+        	exp(index - 1, [s.[index], ...acc])
+        }
+  	};
+  	exp(String.length(s) - 1, [])
+};
+
 /* lexical analysis with tokenizer */
 /* [{type: "number"}, {value: "3"}] */
 let tokenizer = input => {
