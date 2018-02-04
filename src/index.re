@@ -7,7 +7,7 @@ type token =
   | String(string)
   | Name(string);
 
-let stringToList = string => {
+let stringToCharList = string => {
   let rec exp = (index, acc) =>
     if (index < 0) {
       acc;
@@ -17,11 +17,21 @@ let stringToList = string => {
   exp(String.length(string) - 1, []);
 };
 
+/*
+ @inpt - a list of chars containing the remaining data to process
+ @current - a param of type option token with the current type of token being processed
+ @tokens - he accumulator with the list of tokens that will be sent as output
+ */
 let tokenizer = input => {
   let rec transform = (inpt, current, tokens) =>
-    if (inpt !== []) {
-      let tail = List.tl(inpt);
+    switch inpt {
+    | [] => Js.log(Array.of_list(List.rev(tokens)))
+    | _ =>
+      /*char that is being processed*/
       let head = List.hd(inpt);
+      /*remainder*/
+      let tail = List.tl(inpt);
+      /*partially applied transform*/
       let next = transform(tail);
       let token =
         switch (head, current) {
@@ -30,41 +40,22 @@ let tokenizer = input => {
         | (' ', None) => next(None, tokens)
         | ('a'..'z', None) => next(Some(Name(String.make(1, head))), tokens)
         | ('0'..'9', None) => next(Some(Number(String.make(1, head))), tokens)
-
         | (' ', Some(Name(current))) => next(None, [current, ...tokens])
         | (')', Some(Name(current))) =>
           next(None, [String.make(1, head), current, ...tokens])
         | ('a'..'z', Some(Name(current))) =>
           next(Some(Name(current ++ String.make(1, head))), tokens)
-
         | (' ', Some(Number(current))) => next(None, [current, ...tokens])
         | (')', Some(Number(current))) =>
           next(None, [String.make(1, head), current, ...tokens])
         | ('0'..'9', Some(Number(current))) =>
           next(Some(Number(current ++ String.make(1, head))), tokens)
         };
-      ();
-    } else {
-      Js.log(Array.of_list(List.rev(tokens)));
-    };
-  transform(stringToList(input), None, []);
+      };
+  transform(stringToCharList(input), None, []);
 };
 
 tokenizer(lisp);
-/*
- | ('(', None)=> next(None, [String.make(1, head), ...tokens])
- | (')', None) => next(None, [String.make(1, head), ...tokens])
- | (' ', None) => next(None, [String.make(0, head), ...tokens])
- | ('a'..'z', None) => next(Some(Name(String.make(1, head))), tokens)
- | ('0'..'9', None) => next(None, [String.make(1, head), ...tokens])
-
- | ('(', None)=> next(None, [String.make(1, head), ...tokens])
- | (')', None) => next(None, [String.make(1, head), ...tokens])
- | (' ', None) => next(None, [String.make(0, head), ...tokens])
- | ('a'..'z', Some(Name(current))) => next(Some(Name(current ++ String.make(1, head))), tokens)
- | ('a'..'z', Some(Name(current))) => next(None, [String.make(1, head), ...tokens])
- | ('0'..'9', None) => next(None, [String.make(1, head), ...tokens])
-  */
 /* let tokenizer = input => {
      let rec transform = (expression, currentIndex, tokens) =>
        if (currentIndex !== 0) {
