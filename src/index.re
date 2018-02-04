@@ -1,5 +1,3 @@
-let lisp = "(add 2 (subtract 4 2))";
-
 type token =
   | OpenParen
   | CloseParen
@@ -27,35 +25,47 @@ let tokenizer = input => {
     switch inpt {
     | [] => Js.log(Array.of_list(List.rev(tokens)))
     | _ =>
-      /*char that is being processed*/
+      /* char that is being processed*/
       let head = List.hd(inpt);
-      /*remainder*/
+      /* remainder*/
       let tail = List.tl(inpt);
-      /*partially applied transform*/
+      /* partially applied transform*/
       let next = transform(tail);
-      let token =
-        switch (head, current) {
-        | ('(', None) => next(None, [String.make(1, head), ...tokens])
-        | (')', None) => next(None, [String.make(1, head), ...tokens])
-        | (' ', None) => next(None, tokens)
-        | ('a'..'z', None) => next(Some(Name(String.make(1, head))), tokens)
-        | ('0'..'9', None) => next(Some(Number(String.make(1, head))), tokens)
-        | (' ', Some(Name(current))) => next(None, [current, ...tokens])
-        | (')', Some(Name(current))) =>
-          next(None, [String.make(1, head), current, ...tokens])
-        | ('a'..'z', Some(Name(current))) =>
-          next(Some(Name(current ++ String.make(1, head))), tokens)
-        | (' ', Some(Number(current))) => next(None, [current, ...tokens])
-        | (')', Some(Number(current))) =>
-          next(None, [String.make(1, head), current, ...tokens])
-        | ('0'..'9', Some(Number(current))) =>
-          next(Some(Number(current ++ String.make(1, head))), tokens)
-        };
+      switch (head, current) {
+      /* current is None*/
+      | ('(', None) => next(None, [String.make(1, head), ...tokens])
+      | (')', None) => next(None, [String.make(1, head), ...tokens])
+      | (' ' | '\t' | '\r' | '\n', None) => next(None, tokens)
+      | ('"', None) => next(Some(String("")), tokens)
+      | ('a'..'z', None) => next(Some(Name(String.make(1, head))), tokens)
+      | ('0'..'9', None) => next(Some(Number(String.make(1, head))), tokens)
+      /* current is String*/
+      | ('"', Some(String(current))) => next(None, [current, ...tokens])
+      | (head, Some(String(current))) =>
+        next(Some(String(current ++ String.make(1, head))), tokens)
+      /* current is Name*/
+      | (' ', Some(Name(current))) => next(None, [current, ...tokens])
+      | (')', Some(Name(current))) =>
+        next(None, [String.make(1, head), current, ...tokens])
+      | ('a'..'z', Some(Name(current))) =>
+        next(Some(Name(current ++ String.make(1, head))), tokens)
+      /* current is Number*/
+      | (' ', Some(Number(current))) => next(None, [current, ...tokens])
+      | (')', Some(Number(current))) =>
+        next(None, [String.make(1, head), current, ...tokens])
+      | ('0'..'9', Some(Number(current))) =>
+        next(Some(Number(current ++ String.make(1, head))), tokens)
+      /* cover the rest of the cases*/
+      | (_, _) => next(None, tokens)
       };
+    };
   transform(stringToCharList(input), None, []);
 };
 
-tokenizer(lisp);
+tokenizer("(add 2 (subtract 4 2))");
+
+
+/* old version*/
 /* let tokenizer = input => {
      let rec transform = (expression, currentIndex, tokens) =>
        if (currentIndex !== 0) {
