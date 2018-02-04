@@ -7,10 +7,9 @@ type token =
 
 let stringToCharList = string => {
   let rec exp = (index, acc) =>
-    if (index < 0) {
-      acc;
-    } else {
-      exp(index - 1, [string.[index], ...acc]);
+    switch (index < 0) {
+    | true => acc
+    | _ => exp(index - 1, [string.[index], ...acc])
     };
   exp(String.length(string) - 1, []);
 };
@@ -63,6 +62,7 @@ let tokenizer = input => {
 };
 
 tokenizer("(add 2 (subtract 4 2))");
+
 
 
 /* old version*/
