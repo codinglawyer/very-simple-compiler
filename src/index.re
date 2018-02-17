@@ -22,7 +22,7 @@ let stringToCharList = string => {
 let tokenizer = input => {
   let rec transform = (inpt, current, tokens) =>
     switch inpt {
-    | [] => Js.log(Array.of_list(List.rev(tokens)))
+    | [] => List.rev(tokens)
     | _ =>
       /* char that is being processed*/
       let head = List.hd(inpt);
@@ -63,9 +63,44 @@ let tokenizer = input => {
 
 tokenizer("(add 2 (subtract 4 2))");
 
+let tokens = tokenizer("(add 2 (subtract 4 2))");
+
+/* Js.log(tokens); */
+
+/* AST node */
+type callExpressionsNode = {type_: string, name: string };
+
+/* type callExpressionsNode = {type_: string, name: string }; */
+
+type ast = {
+  type_: string,
+  body: list(callExpressionsNode)
+};
+
+let parser = tokens => {
+  let rec func = (input, current, ast) => {
+    let head = List.hd(input);
+    let tail = List.tl(input);
+    Js.log(head);
+    Js.log(ast);
+    /* Js.log(tail); */
+    switch (head) {
+    | ("(") => func(tail, None, ast)
+    | ("add") => func(tail, None, {...ast, body: [{type_: "CallExpression", name: "add" }]})
+    /* | (_,_) => Js.log(head) */
+    }
+  }; func(tokens, None, {type_: "Program", body: []})
+};
+
+parser(tokens);
 
 
-/* old version*/
+
+
+
+
+
+/* old tokenizer version*/
 /* let tokenizer = input => {
      let rec transform = (expression, currentIndex, tokens) =>
        if (currentIndex !== 0) {
