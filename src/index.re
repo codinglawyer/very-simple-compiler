@@ -61,20 +61,39 @@ let tokenizer = input => {
   transform(stringToCharList(input), None, []);
 };
 
-tokenizer("(add 2 (subtract 4 2))");
+/* tokenizer("(add 2 (subtract 4 2))"); */
+let tokens = tokenizer("(add 2 (subtract 4 3))");
 
-let tokens = tokenizer("(add 2 (subtract 4 2))");
+Js.log(Array.of_list(tokens));
 
-/* Js.log(tokens); */
 
-/* AST node */
-type callExpressionsNode = {type_: string, name: string };
 
-/* type callExpressionsNode = {type_: string, name: string }; */
+/* AST nodes */
+type numberLiteralNode = {
+  type_: string,
+  value: string
+};
+
+type callExpressionNode = {
+  type_: string,
+  name: string,
+  params: list(numberLiteralNode)
+  /* params: string */
+};
+
+type node =
+  | NumberLiteralNode(numberLiteralNode)
+  | CallExpressionNode(callExpressionNode);
+
+type callExpressions = {
+  type_: string,
+  name: string,
+  params: list(node)
+};
 
 type ast = {
   type_: string,
-  body: list(callExpressionsNode)
+  body: list(callExpressions)
 };
 
 let parser = tokens => {
@@ -84,20 +103,108 @@ let parser = tokens => {
     Js.log(head);
     Js.log(ast);
     /* Js.log(tail); */
-    switch (head) {
-    | ("(") => func(tail, None, ast)
-    | ("add") => func(tail, None, {...ast, body: [{type_: "CallExpression", name: "add" }]})
-    /* | (_,_) => Js.log(head) */
-    }
-  }; func(tokens, None, {type_: "Program", body: []})
+    switch head {
+    | "(" => func(tail, None, ast)
+    | ")" => func(tail, None, ast)
+    | "add" =>
+      func(
+        tail,
+        None,
+        {...ast, body: [{type_: "CallExpression", name: "add", params: []}]}
+      )
+    | "2" =>
+      func(
+        tail,
+        None,
+        {
+          ...ast,
+          body: [
+            {
+              type_: "CallExpression",
+              name: "add",
+              params: [
+                NumberLiteralNode({type_: "NumberLiteral", value: head})
+              ]
+            }
+          ]
+        }
+      )
+    | "subtract" =>
+      func(
+        tail,
+        None,
+        {
+          ...ast,
+          body: [
+            {
+              type_: "CallExpression",
+              name: "add",
+              params: [
+                NumberLiteralNode({type_: "NumberLiteral", value: "2"}),
+                CallExpressionNode({
+                  type_: "CallExpression",
+                  name: head,
+                  params: []
+                })
+              ]
+            }
+          ]
+        }
+      )
+    | "4" =>
+      func(
+        tail,
+        None,
+        {
+          ...ast,
+          body: [
+            {
+              type_: "CallExpression",
+              name: "add",
+              params: [
+                NumberLiteralNode({type_: "NumberLiteral", value: "2"}),
+                CallExpressionNode({
+                  type_: "CallExpression",
+                  name: "subtract",
+                  params: [{type_: "NumberLiteral", value: head}]
+                })
+              ]
+            }
+          ]
+        }
+      )
+    | "3" =>
+      func(
+        tail,
+        None,
+        {
+          ...ast,
+          body: [
+            {
+              type_: "CallExpression",
+              name: "add",
+              params: [
+                NumberLiteralNode({type_: "NumberLiteral", value: "2"}),
+                CallExpressionNode({
+                  type_: "CallExpression",
+                  name: "subtract",
+                  params: [
+                    {type_: "NumberLiteral", value: "4"},
+                    {type_: "NumberLiteral", value: head}
+                  ]
+                })
+              ]
+            }
+          ]
+        }
+      )
+    | _ => Js.log(head)
+    };
+  };
+  func(tokens, None, {type_: "Program", body: []});
 };
 
 parser(tokens);
-
-
-
-
-
 
 
 /* old tokenizer version*/
@@ -120,3 +227,15 @@ parser(tokens);
        };
      Js.log(transform(input, String.length(input) - 1, []));
    }; */
+/* [@bs.deriving jsConverter]
+   type something = {
+     foo: int,
+     bar: float
+   };
+
+   let x = {
+     foo: 10,
+     bar: 0.01
+   };
+
+   Js.log(somethingToJs(x)); */
