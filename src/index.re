@@ -3,7 +3,8 @@ type token =
   | CloseParen
   | Number(string)
   | String(string)
-  | Name(string);
+  | Name(string)
+  | CallExpression;
 
 let stringToCharList = string => {
   let rec exp = (index, acc) =>
@@ -118,20 +119,20 @@ let parser = tokens => {
         let tail = List.tl(input);
         /* Js.log(head); */
         /* Js.log(input); */
-        switch head {
-        | "(" => func(tail, None, ast)
-        | ")" => func(tail, None, ast)
-        | "add" => [{type_: Some("CallExpression"), name: Some("add"), value:None, params: Some(func(tail, None, []))}]
-        | "2" => func(tail, None, [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
-        | "subtract" => [{
+        switch (head, current) {
+        | ("(", None | Some(CallExpression)) => func(tail, Some(OpenParen), ast)
+        | (")", Some(CallExpression)) => func(tail, Some(CloseParen), ast)
+        | ("add", Some(OpenParen)) => [{type_: Some("CallExpression"), name: Some("add"), value:None, params: Some(func(tail, Some(CallExpression), []))}]
+        | ("2", Some(CallExpression)) => func(tail, Some(CallExpression), [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
+        | ("subtract", Some(OpenParen)) => [{
           type_: Some("CallExpression"),
           name: Some(head),
-          params: Some(func(tail, None, [])),
+          params: Some(func(tail, Some(CallExpression), [])),
           value: None
         }, ...ast]
-        | "4" => func(tail, None, [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
-        | "3" => func(tail, None, [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
-        | _ => func(tail, None, ast)
+        | ("4", Some(CallExpression)) => func(tail, Some(CallExpression), [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
+        | ("3", Some(CallExpression)) => func(tail, Some(CallExpression), [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
+        | (_,_) => func(tail, None, ast)
         };
     };
   };
