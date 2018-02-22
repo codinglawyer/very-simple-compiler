@@ -110,6 +110,10 @@ type ast = {
   body: list(callExpressionNode)
 };
 
+/* let comp = (val) => Js.Re.test(val)([%bs.re "/^\d+$/"]) */
+let numberRegex = [%bs.re "/^\d+$/"];
+
+
 let parser = tokens => {
   let rec func = (input, current, ast) => {
     switch input{
@@ -123,15 +127,13 @@ let parser = tokens => {
         | ("(", None | Some(CallExpression)) => func(tail, Some(OpenParen), ast)
         | (")", Some(CallExpression)) => func(tail, Some(CloseParen), ast)
         | ("add", Some(OpenParen)) => [{type_: Some("CallExpression"), name: Some("add"), value:None, params: Some(func(tail, Some(CallExpression), []))}]
-        | ("2", Some(CallExpression)) => func(tail, Some(CallExpression), [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
+        | (_numberRegex, Some(CallExpression)) => func(tail, Some(CallExpression), [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
         | ("subtract", Some(OpenParen)) => [{
           type_: Some("CallExpression"),
           name: Some(head),
           params: Some(func(tail, Some(CallExpression), [])),
           value: None
         }, ...ast]
-        | ("4", Some(CallExpression)) => func(tail, Some(CallExpression), [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
-        | ("3", Some(CallExpression)) => func(tail, Some(CallExpression), [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
         | (_,_) => func(tail, None, ast)
         };
     };
@@ -141,7 +143,6 @@ let parser = tokens => {
 };
 
 parser(tokens);
-
 
 /* old tokenizer version*/
 /* let tokenizer = input => {
