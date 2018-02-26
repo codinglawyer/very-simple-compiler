@@ -6,7 +6,7 @@ type token =
   | Name(string)
   | CallExpression;
 
-let stringToCharList = string => {
+let stringToCharList = (string: string) => {
   let rec exp = (index, acc) =>
     switch (index < 0) {
     | true => acc
@@ -20,45 +20,47 @@ let stringToCharList = string => {
  @current - a param of type option token with the current type of token being processed
  @tokens - he accumulator with the list of tokens that will be sent as output
  */
-let tokenizer = input => {
-  let rec transform = (inpt, current, tokens) =>
-    switch inpt {
-    | [] => List.rev(tokens)
-    | _ =>
-      /* char that is being processed*/
-      let head = List.hd(inpt);
-      /* remainder*/
-      let tail = List.tl(inpt);
-      /* partially applied transform*/
-      let next = transform(tail);
-      switch (head, current) {
-      /* current is None*/
-      | ('(', None) => next(None, [String.make(1, head), ...tokens])
-      | (')', None) => next(None, [String.make(1, head), ...tokens])
-      | (' ' | '\t' | '\r' | '\n', None) => next(None, tokens)
-      | ('"', None) => next(Some(String("")), tokens)
-      | ('a'..'z', None) => next(Some(Name(String.make(1, head))), tokens)
-      | ('0'..'9', None) => next(Some(Number(String.make(1, head))), tokens)
-      /* current is String*/
-      | ('"', Some(String(current))) => next(None, [current, ...tokens])
-      | (head, Some(String(current))) =>
-        next(Some(String(current ++ String.make(1, head))), tokens)
-      /* current is Name*/
-      | (' ', Some(Name(current))) => next(None, [current, ...tokens])
-      | (')', Some(Name(current))) =>
-        next(None, [String.make(1, head), current, ...tokens])
-      | ('a'..'z', Some(Name(current))) =>
-        next(Some(Name(current ++ String.make(1, head))), tokens)
-      /* current is Number*/
-      | (' ', Some(Number(current))) => next(None, [current, ...tokens])
-      | (')', Some(Number(current))) =>
-        next(None, [String.make(1, head), current, ...tokens])
-      | ('0'..'9', Some(Number(current))) =>
-        next(Some(Number(current ++ String.make(1, head))), tokens)
-      /* cover the rest of the cases*/
-      | (_, _) => next(None, tokens)
+let tokenizer = (input: string) => {
+  let rec transform =
+          (inpt: list(char), current: option(token), tokens: list(string)) =>
+    /* recursively call the function until all the tokens are processed*/
+    inpt === [] ?
+      List.rev(tokens) :
+      {
+        /* char that is being processed*/
+        let head = List.hd(inpt);
+        /* remainder*/
+        let tail = List.tl(inpt);
+        /* partially applied transform*/
+        let next = transform(tail);
+        switch (head: char, current: option('a)) {
+        /* current is None*/
+        | ('(', None) => next(None, [String.make(1, head), ...tokens])
+        | (')', None) => next(None, [String.make(1, head), ...tokens])
+        | (' ' | '\t' | '\r' | '\n', None) => next(None, tokens)
+        | ('"', None) => next(Some(String("")), tokens)
+        | ('a'..'z', None) => next(Some(Name(String.make(1, head))), tokens)
+        | ('0'..'9', None) => next(Some(Number(String.make(1, head))), tokens)
+        /* current is String*/
+        | ('"', Some(String(current))) => next(None, [current, ...tokens])
+        | (head, Some(String(current))) =>
+          next(Some(String(current ++ String.make(1, head))), tokens)
+        /* current is Name*/
+        | (' ', Some(Name(current))) => next(None, [current, ...tokens])
+        | (')', Some(Name(current))) =>
+          next(None, [String.make(1, head), current, ...tokens])
+        | ('a'..'z', Some(Name(current))) =>
+          next(Some(Name(current ++ String.make(1, head))), tokens)
+        /* current is Number*/
+        | (' ', Some(Number(current))) => next(None, [current, ...tokens])
+        | (')', Some(Number(current))) =>
+          next(None, [String.make(1, head), current, ...tokens])
+        | ('0'..'9', Some(Number(current))) =>
+          next(Some(Number(current ++ String.make(1, head))), tokens)
+        /* cover the rest of the cases*/
+        | (_, _) => next(None, tokens)
+        };
       };
-    };
   transform(stringToCharList(input), None, []);
 };
 
@@ -67,31 +69,26 @@ let tokens = tokenizer("(add 2 (subtract 4 3))");
 
 Js.log(Array.of_list(tokens));
 
-
-
-
-
 /*
-  How AST should look like
+   How AST should look like
 
-  {type_: "Program", body: [
-  {
-    type_: "CallExpression",
-    name: "add",
-    params: [
-      NumberLiteralNode({type_: "NumberLiteral", value: "2"}),
-      CallExpressionNode({
-        type_: "CallExpression",
-        name: "subtract",
-        params: [
-          {type_: "NumberLiteral", value: "4"},
-          {type_: "NumberLiteral", value: head}
-        ]
-      })
-    ]
-  }
-]}; */
-
+   {type_: "Program", body: [
+   {
+     type_: "CallExpression",
+     name: "add",
+     params: [
+       NumberLiteralNode({type_: "NumberLiteral", value: "2"}),
+       CallExpressionNode({
+         type_: "CallExpression",
+         name: "subtract",
+         params: [
+           {type_: "NumberLiteral", value: "4"},
+           {type_: "NumberLiteral", value: head}
+         ]
+       })
+     ]
+   }
+ ]}; */
 /* AST nodes */
 type literalNode = {
   type_: string,
@@ -111,39 +108,60 @@ type ast = {
 };
 
 /* let comp = (val) => Js.Re.test(val)([%bs.re "/^\d+$/"]) */
-let numberRegex = [%bs.re "/^\d+$/"];
+let numberRegex = [%bs.re "/^\\d+$/"];
 
-
-let parser = tokens => {
-  let rec func = (input, current, ast) => {
-    switch input{
-      | [] => ast
-      | _ =>
+let parser = (tokens: list(string)) => {
+  let rec func = (input: list(string), current: option(token), ast) =>
+    input === [] ?
+      ast :
+      {
         let head = List.hd(input);
         let tail = List.tl(input);
         /* Js.log(head); */
         /* Js.log(input); */
-        switch (head, current) {
-        | ("(", None | Some(CallExpression)) => func(tail, Some(OpenParen), ast)
+        switch (head: string, current: option('a)) {
+        | ("(", None | Some(CallExpression)) =>
+          func(tail, Some(OpenParen), ast)
         | (")", Some(CallExpression)) => func(tail, Some(CloseParen), ast)
-        | ("add", Some(OpenParen)) => [{type_: Some("CallExpression"), name: Some("add"), value:None, params: Some(func(tail, Some(CallExpression), []))}]
-        | (_numberRegex, Some(CallExpression)) => func(tail, Some(CallExpression), [{type_: Some("NumberLiteral"), value: Some(head), params: None, name: None}, ...ast])
-        | ("subtract", Some(OpenParen)) => [{
-          type_: Some("CallExpression"),
-          name: Some(head),
-          params: Some(func(tail, Some(CallExpression), [])),
-          value: None
-        }, ...ast]
-        | (_,_) => func(tail, None, ast)
+        | ("add", Some(OpenParen)) => [
+            {
+              type_: Some("CallExpression"),
+              name: Some("add"),
+              value: None,
+              params: Some(func(tail, Some(CallExpression), []))
+            }
+          ]
+        | (_numberRegex, Some(CallExpression)) =>
+          func(
+            tail,
+            Some(CallExpression),
+            [
+              {
+                type_: Some("NumberLiteral"),
+                value: Some(head),
+                params: None,
+                name: None
+              },
+              ...ast
+            ]
+          )
+        | ("subtract", Some(OpenParen)) => [
+            {
+              type_: Some("CallExpression"),
+              name: Some(head),
+              params: Some(func(tail, Some(CallExpression), [])),
+              value: None
+            },
+            ...ast
+          ]
+        | (_, _) => func(tail, None, ast)
         };
-    };
-  };
+      };
   let ast = {type_: "Program", body: func(tokens, None, [])};
-  Js.log(ast)
+  Js.log(ast);
 };
 
 parser(tokens);
-
 /* old tokenizer version*/
 /* let tokenizer = input => {
      let rec transform = (expression, currentIndex, tokens) =>
@@ -164,7 +182,6 @@ parser(tokens);
        };
      Js.log(transform(input, String.length(input) - 1, []));
    }; */
-
 /* [@bs.deriving jsConverter]
    type something = {
      foo: int,
