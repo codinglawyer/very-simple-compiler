@@ -65,9 +65,7 @@ let tokenizer = (input: string) => {
 };
 
 /* tokenizer("(add 2 (subtract 4 2))"); */
-let tokens = tokenizer("(add 2 (subtract 4 3))");
 
-Js.log(Array.of_list(tokens));
 
 /*
    How AST should look like
@@ -161,7 +159,16 @@ let parser = (tokens: list(string)) => {
   Js.log(ast);
 };
 
-parser(tokens);
+let lispExpression = "(add 2 (subtract 4 3))";
+
+let compiler = lispExpression
+|> tokenizer
+|> parser;
+
+
+Js.log(compiler);
+
+
 /* old tokenizer version*/
 /* let tokenizer = input => {
      let rec transform = (expression, currentIndex, tokens) =>
