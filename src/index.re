@@ -22,51 +22,63 @@ let stringToCharList = (string: string) => {
  */
 let tokenizer = (input: string) => {
   let rec transform =
-          (inpt: list(char), current: option(token), tokens: list(string)) =>
+          (~charList: list(char), ~previousToken: option(token), ~tokens: list(string)) =>
     /* recursively call the function until all the tokens are processed*/
-    inpt === [] ?
+    charList === [] ?
       List.rev(tokens) :
       {
         /* char that is being processed*/
-        let head = List.hd(inpt);
+        let head = List.hd(charList);
         /* remainder*/
-        let tail = List.tl(inpt);
+        let tail = List.tl(charList);
         /* partially applied transform*/
-        let next = transform(tail);
-        switch (head: char, current: option('a)) {
-        /* current is None*/
-        | ('(', None) => next(None, [String.make(1, head), ...tokens])
-        | (')', None) => next(None, [String.make(1, head), ...tokens])
-        | (' ' | '\t' | '\r' | '\n', None) => next(None, tokens)
-        | ('"', None) => next(Some(String("")), tokens)
-        | ('a'..'z', None) => next(Some(Name(String.make(1, head))), tokens)
-        | ('0'..'9', None) => next(Some(Number(String.make(1, head))), tokens)
-        /* current is String*/
-        | ('"', Some(String(current))) => next(None, [current, ...tokens])
-        | (head, Some(String(current))) =>
-          next(Some(String(current ++ String.make(1, head))), tokens)
-        /* current is Name*/
-        | (' ', Some(Name(current))) => next(None, [current, ...tokens])
-        | (')', Some(Name(current))) =>
-          next(None, [String.make(1, head), current, ...tokens])
-        | ('a'..'z', Some(Name(current))) =>
-          next(Some(Name(current ++ String.make(1, head))), tokens)
-        /* current is Number*/
-        | (' ', Some(Number(current))) => next(None, [current, ...tokens])
-        | (')', Some(Number(current))) =>
-          next(None, [String.make(1, head), current, ...tokens])
-        | ('0'..'9', Some(Number(current))) =>
-          next(Some(Number(current ++ String.make(1, head))), tokens)
+        let next = transform(~charList=tail);
+        switch (head: char, previousToken: option(token)) {
+        /* previousToken is None*/
+        | ('(', None) =>
+          next(~previousToken=None, ~tokens=[String.make(1, head), ...tokens])
+        | (')', None) =>
+          next(~previousToken=None, ~tokens=[String.make(1, head), ...tokens])
+        | (' ' | '\t' | '\r' | '\n', None) => next(~previousToken=None, ~tokens)
+        | ('"', None) => next(~previousToken=Some(String("")), ~tokens)
+        | ('a'..'z', None) =>
+          next(~previousToken=Some(Name(String.make(1, head))), ~tokens)
+        | ('0'..'9', None) =>
+          next(~previousToken=Some(Number(String.make(1, head))), ~tokens)
+        /* previousToken is String*/
+        | ('"', Some(String(previousToken))) =>
+          next(~previousToken=None, ~tokens=[previousToken, ...tokens])
+        | (head, Some(String(previousToken))) =>
+          next(~previousToken=Some(String(previousToken ++ String.make(1, head))), ~tokens)
+        /* previousToken is Name*/
+        | (' ', Some(Name(previousToken))) =>
+          next(~previousToken=None, ~tokens=[previousToken, ...tokens])
+        | (')', Some(Name(previousToken))) =>
+          next(
+            ~previousToken=None,
+            ~tokens=[String.make(1, head), previousToken, ...tokens]
+          )
+        | ('a'..'z', Some(Name(previousToken))) =>
+          next(~previousToken=Some(Name(previousToken ++ String.make(1, head))), ~tokens)
+        /* previousToken is Number*/
+        | (' ', Some(Number(previousToken))) =>
+          next(~previousToken=None, ~tokens=[previousToken, ...tokens])
+        | (')', Some(Number(previousToken))) =>
+          next(
+            ~previousToken=None,
+            ~tokens=[String.make(1, head), previousToken, ...tokens]
+          )
+        | ('0'..'9', Some(Number(previousToken))) =>
+          next(~previousToken=Some(Number(previousToken ++ String.make(1, head))), ~tokens)
         /* cover the rest of the cases*/
-        | (_, _) => next(None, tokens)
+        | (_, _) => next(~previousToken=None, ~tokens)
         };
       };
-  transform(stringToCharList(input), None, []);
+  transform(~charList=stringToCharList(input), ~previousToken=None, ~tokens=[]);
 };
 
+/* (inpt: list(char), current: option(token), tokens: list(string)) */
 /* tokenizer("(add 2 (subtract 4 2))"); */
-
-
 /*
    How AST should look like
 
@@ -161,14 +173,9 @@ let parser = (tokens: list(string)) => {
 
 let lispExpression = "(add 2 (subtract 4 3))";
 
-let compiler = lispExpression
-|> tokenizer
-|> parser;
-
+let compiler = lispExpression |> tokenizer |> parser;
 
 Js.log(compiler);
-
-
 /* old tokenizer version*/
 /* let tokenizer = input => {
      let rec transform = (expression, currentIndex, tokens) =>
