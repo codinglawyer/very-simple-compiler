@@ -16,23 +16,23 @@ let stringToCharList = (string: string) => {
 };
 
 /*
- @inpt - a list of chars containing the remaining data to process
- @current - a param of type option token with the current type of token being processed
+ @remainingChars - a list of chars containing the remaining data to process
+ @previousToken - a param of type option token with the current type of token being processed
  @tokens - he accumulator with the list of tokens that will be sent as output
  */
 let tokenizer = (input: string) => {
   let rec transform =
-          (~charList: list(char), ~previousToken: option(token), ~tokens: list(string)) =>
+          (~remainingChars: list(char), ~previousToken: option(token), ~tokens: list(string)) =>
     /* recursively call the function until all the tokens are processed*/
-    charList === [] ?
+    remainingChars === [] ?
       List.rev(tokens) :
       {
         /* char that is being processed*/
-        let head = List.hd(charList);
+        let head = List.hd(remainingChars);
         /* remainder*/
-        let tail = List.tl(charList);
+        let tail = List.tl(remainingChars);
         /* partially applied transform*/
-        let next = transform(~charList=tail);
+        let next = transform(~remainingChars=tail);
         switch (head: char, previousToken: option(token)) {
         /* previousToken is None*/
         | ('(', None) =>
@@ -74,11 +74,9 @@ let tokenizer = (input: string) => {
         | (_, _) => next(~previousToken=None, ~tokens)
         };
       };
-  transform(~charList=stringToCharList(input), ~previousToken=None, ~tokens=[]);
+  transform(~remainingChars=stringToCharList(input), ~previousToken=None, ~tokens=[]);
 };
 
-/* (inpt: list(char), current: option(token), tokens: list(string)) */
-/* tokenizer("(add 2 (subtract 4 2))"); */
 /*
    How AST should look like
 
@@ -99,6 +97,7 @@ let tokenizer = (input: string) => {
      ]
    }
  ]}; */
+
 /* AST nodes */
 type literalNode = {
   type_: string,
@@ -117,35 +116,34 @@ type ast = {
   body: list(callExpressionNode)
 };
 
-/* let comp = (val) => Js.Re.test(val)([%bs.re "/^\d+$/"]) */
 let numberRegex = [%bs.re "/^\\d+$/"];
 
 let parser = (tokens: list(string)) => {
-  let rec func = (input: list(string), current: option(token), ast) =>
-    input === [] ?
+  let rec func = (~remainingTokens: list(string), ~previousNode: option(token), ~ast) =>
+    remainingTokens === [] ?
       ast :
       {
-        let head = List.hd(input);
-        let tail = List.tl(input);
+        let head = List.hd(remainingTokens);
+        let tail = List.tl(remainingTokens);
         /* Js.log(head); */
-        /* Js.log(input); */
-        switch (head: string, current: option('a)) {
+        /* Js.log(remainingTokens); */
+        switch (head: string, previousNode: option(token)) {
         | ("(", None | Some(CallExpression)) =>
-          func(tail, Some(OpenParen), ast)
-        | (")", Some(CallExpression)) => func(tail, Some(CloseParen), ast)
+          func(~remainingTokens=tail, ~previousNode=Some(OpenParen), ~ast=ast)
+        | (")", Some(CallExpression)) => func(~remainingTokens=tail, ~previousNode=Some(CloseParen), ~ast=ast)
         | ("add", Some(OpenParen)) => [
             {
               type_: Some("CallExpression"),
               name: Some("add"),
               value: None,
-              params: Some(func(tail, Some(CallExpression), []))
+              params: Some(func(~remainingTokens=tail, ~previousNode=Some(CallExpression), ~ast=[]))
             }
           ]
         | (_numberRegex, Some(CallExpression)) =>
           func(
-            tail,
-            Some(CallExpression),
-            [
+            ~remainingTokens=tail,
+            ~previousNode=Some(CallExpression),
+            ~ast=[
               {
                 type_: Some("NumberLiteral"),
                 value: Some(head),
@@ -159,15 +157,15 @@ let parser = (tokens: list(string)) => {
             {
               type_: Some("CallExpression"),
               name: Some(head),
-              params: Some(func(tail, Some(CallExpression), [])),
+              params: Some(func(~remainingTokens=tail, ~previousNode=Some(CallExpression), ~ast=[])),
               value: None
             },
             ...ast
           ]
-        | (_, _) => func(tail, None, ast)
+        | (_, _) => func(~remainingTokens=tail, ~previousNode=None, ~ast=ast)
         };
       };
-  let ast = {type_: "Program", body: func(tokens, None, [])};
+  let ast = {type_: "Program", body: func(~remainingTokens=tokens, ~previousNode=None, ~ast=[])};
   Js.log(ast);
 };
 
@@ -176,35 +174,3 @@ let lispExpression = "(add 2 (subtract 4 3))";
 let compiler = lispExpression |> tokenizer |> parser;
 
 Js.log(compiler);
-/* old tokenizer version*/
-/* let tokenizer = input => {
-     let rec transform = (expression, currentIndex, tokens) =>
-       if (currentIndex !== 0) {
-         let char = expression.[currentIndex];
-         let token =
-           switch char {
-           | '(' => {type_: "paren", value: String.make(1, char)}
-           | ')' => {type_: "paren", value: String.make(1, char)}
-           | ' ' => {type_: "space", value: String.make(0, char)}
-           | 'a'..'z' => {type_: "name", value: String.make(1, char)}
-           | '0'..'9' => {type_: "number", value: String.make(1, char)}
-           };
-         Js.log(token.type_);
-         let tok = [token, ...tokens];
-         Js.log(Array.of_list(tok));
-         transform(input, currentIndex - 1, tok);
-       };
-     Js.log(transform(input, String.length(input) - 1, []));
-   }; */
-/* [@bs.deriving jsConverter]
-   type something = {
-     foo: int,
-     bar: float
-   };
-
-   let x = {
-     foo: 10,
-     bar: 0.01
-   };
-
-   Js.log(somethingToJs(x)); */
